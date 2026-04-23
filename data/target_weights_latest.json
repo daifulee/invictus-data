@@ -1,14 +1,31 @@
 {
-  "updated": "2026-04-23T13:28:41.453882Z",
-  "based_on_date": null,
-  "by": "GHA auto compute_target_weights.py v1.0 (Legio L1 beta)",
+  "updated": "2026-04-23T13:44:44.689023Z",
+  "based_on_date": "2026-04-23",
+  "by": "GHA auto compute_target_weights.py v1.2 (Legio L1 beta, Yahoo v8)",
   "engine": "Legio v2.11 mom_score (base × vol_penalty × momma_mp)",
+  "data_source": "Yahoo v8 chart API (query1.finance.yahoo.com)",
+  "coverage": "20/20",
   "weights": {
-    "달러RP(수시형)": 0.1
+    "SMH": 0.21128,
+    "COPX": 0.149529,
+    "SLV": 0.136031,
+    "EWZ": 0.128433,
+    "PAVE": 0.103619,
+    "IWM": 0.085837,
+    "QQQM": 0.085272,
+    "달러RP(수시형)": 0.099999
   },
-  "top7": [],
+  "top7": [
+    "SMH",
+    "COPX",
+    "SLV",
+    "EWZ",
+    "PAVE",
+    "IWM",
+    "QQQM"
+  ],
   "rp_pct": 10.0,
   "override_status": "auto_beta_not_claude_final",
   "disclaimer": "GHA 자동 산출 (Legio L1 only). Scenarios/Oracle L2/Commander Override 미반영. Claude 정기 브리핑 최종값과 다를 수 있음.",
-  "schema_version": "1.0"
+  "schema_version": "1.1"
 }
