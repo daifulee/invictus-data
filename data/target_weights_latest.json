@@ -1,0 +1,14 @@
+{
+  "updated": "2026-04-23T13:28:41.453882Z",
+  "based_on_date": null,
+  "by": "GHA auto compute_target_weights.py v1.0 (Legio L1 beta)",
+  "engine": "Legio v2.11 mom_score (base × vol_penalty × momma_mp)",
+  "weights": {
+    "달러RP(수시형)": 0.1
+  },
+  "top7": [],
+  "rp_pct": 10.0,
+  "override_status": "auto_beta_not_claude_final",
+  "disclaimer": "GHA 자동 산출 (Legio L1 only). Scenarios/Oracle L2/Commander Override 미반영. Claude 정기 브리핑 최종값과 다를 수 있음.",
+  "schema_version": "1.0"
+}
