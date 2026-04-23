@@ -1,0 +1,45 @@
+name: Auto compute target_weights_latest.json
+
+# [2026-04-23] 🅐 Commander 승인 자동화 — invictus-bot cron 뒤 40분 버퍼
+# 기존 Yahoo/FRED cron(12:50 UTC) → 13:30 UTC에 본 워크플로우 실행
+# → Legio L1 기반 target_weights_latest.json 자동 생성 + commit
+
+on:
+  schedule:
+    - cron: '30 13 * * *'   # 매일 13:30 UTC (invictus-bot 12:50 UTC + 40분 버퍼)
+  workflow_dispatch:        # 수동 트리거 허용
+
+permissions:
+  contents: write           # 자기 저장소에 commit 권한
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pandas
+
+      - name: Compute target weights
+        run: python scripts/compute_target_weights.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "invictus-bot@users.noreply.github.com"
+          git config --local user.name "invictus-bot"
+          git add data/target_weights_latest.json
+          if git diff --staged --quiet; then
+            echo "변경 없음 — commit 스킵"
+          else
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            git commit -m "auto: update target_weights_latest.json [${TIMESTAMP}]"
+            git push
+            echo "✅ commit + push 완료"
+          fi
