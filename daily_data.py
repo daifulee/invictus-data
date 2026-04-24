@@ -1,7 +1,28 @@
 #!/usr/bin/env python3
 """
-INVICTUS Daily Data Collector v1.0.2
+INVICTUS Daily Data Collector v1.0.4
 =====================================
+
+v1.0.4 PATCH (2026-04-24):
+- YAHOO_MACRO 확장: 8종 → 10종
+- 추가 2종:
+  * VIX3M (^VIX3M) - 3개월 VIX (텀 스트럭처 판정)
+  * VVIX  (^VVIX)  - VIX 변동성 지수 (vol-of-vol)
+- Yahoo 매크로 블록의 success 카운터 자동 확장 (로직 변경 없음)
+
+v1.0.3 PATCH (2026-04-24):
+- FRED_SERIES 확장: 9종 → 18종
+- 추가 9종 (T2에서 자동화 가능 항목 병합):
+  * WTREGEN (Treasury General Account, weekly)
+  * DGS10 / DGS2 (daily, 기존 월간 GS10/GS2와 병행)
+  * DTB3 (13-week T-Bill, daily)
+  * EFFR / SOFR (daily, 단기금리)
+  * NFCI (Chicago Fed 금융여건지수, weekly)
+  * WALCL (Fed 대차대조표, weekly)
+  * UMCSENT (미시간 소비자심리, monthly)
+- 기존 GS2/GS10(월간)도 유지하여 히스토리 단절 방지
+- CRITICAL_FIELDS·스키마·CSV upsert 로직 변경 없음
+
 v1.0.2 PATCH (2026-04-19):
 - yfinance 라이브러리 완전 제거
 - Yahoo v8 chart API 직접 호출 (curl_cffi chrome impersonate)
@@ -24,7 +45,7 @@ from curl_cffi import requests as cc_requests
 # ────────────────────────────────────────────────────────
 # 상수
 # ────────────────────────────────────────────────────────
-VERSION = "1.0.2"
+VERSION = "1.0.4"
 SCHEMA_VERSION = "1.0"
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "daily_2026.csv"
@@ -41,6 +62,7 @@ TICKERS_20 = [
     "NLR", "CQQQ", "VNM", "TLT",
 ]
 
+# Yahoo 매크로 10종 (v1.0.4: VIX3M/VVIX 추가)
 YAHOO_MACRO = {
     "VIX":   "^VIX",
     "MOVE":  "^MOVE",
@@ -50,9 +72,14 @@ YAHOO_MACRO = {
     "KRW":   "KRW=X",
     "ES_F":  "ES=F",
     "NQ_F":  "NQ=F",
+    # v1.0.4 신규
+    "VIX3M": "^VIX3M",   # 3개월 VIX — 텀 스트럭처 (VIX/VIX3M < 1 = 콘탱고)
+    "VVIX":  "^VVIX",    # VIX 옵션 변동성 — vol-of-vol
 }
 
+# FRED 18종 — T1 기존 9 + T2 자동화 가능 9
 FRED_SERIES = {
+    # T1 기존 9종 (유지)
     "OAS_HY":  "BAMLH0A0HYM2",
     "T5YIE":   "T5YIE",
     "SAHM":    "SAHMCURRENT",
@@ -60,8 +87,18 @@ FRED_SERIES = {
     "T10Y2Y":  "T10Y2Y",
     "ICSA":    "ICSA",
     "RRP":     "RRPONTSYD",
-    "GS2":     "GS2",
-    "GS10":    "GS10",
+    "GS2":     "GS2",        # 월간 (기존, 히스토리 보존)
+    "GS10":    "GS10",       # 월간 (기존, 히스토리 보존)
+    # T2 신규 9종 (2026-04-24 추가)
+    "WTREGEN": "WTREGEN",    # Treasury General Account (weekly)
+    "DGS10":   "DGS10",      # 10Y Treasury yield (daily)
+    "DGS2":    "DGS2",       # 2Y Treasury yield (daily)
+    "DTB3":    "DTB3",       # 13-week T-Bill (daily, IRX_13W 대체)
+    "EFFR":    "EFFR",       # Effective Fed Funds Rate (daily)
+    "SOFR":    "SOFR",       # Secured Overnight Financing Rate (daily)
+    "NFCI":    "NFCI",       # Chicago Fed NFCI (weekly)
+    "WALCL":   "WALCL",      # Fed Balance Sheet Total Assets (weekly)
+    "UMCSENT": "UMCSENT",    # U.Michigan Consumer Sentiment (monthly)
 }
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
@@ -96,12 +133,10 @@ def fetch_yahoo(symbol: str) -> dict:
                 last_err = f"HTTP {r.status_code}"
                 time.sleep(YAHOO_BACKOFF_SEC)
                 continue
-
             data = r.json()
             chart = data.get("chart", {})
             result = chart.get("result")
             err = chart.get("error")
-
             if err:
                 last_err = str(err)[:100]
                 time.sleep(YAHOO_BACKOFF_SEC)
@@ -110,13 +145,11 @@ def fetch_yahoo(symbol: str) -> dict:
                 last_err = "empty result"
                 time.sleep(YAHOO_BACKOFF_SEC)
                 continue
-
             r0 = result[0]
             ts = r0.get("timestamp", [])
             ind = r0.get("indicators", {}).get("quote", [{}])[0]
             closes = ind.get("close", [])
             volumes = ind.get("volume", [])
-
             # 최신 유효 값 (뒤에서부터 non-null 찾기)
             last_close, last_vol, last_ts = None, None, None
             for i in range(len(closes) - 1, -1, -1):
@@ -125,15 +158,12 @@ def fetch_yahoo(symbol: str) -> dict:
                     last_vol = float(volumes[i]) if i < len(volumes) and volumes[i] is not None else None
                     last_ts = ts[i] if i < len(ts) else None
                     break
-
             if last_close is None:
                 last_err = "all null closes"
                 time.sleep(YAHOO_BACKOFF_SEC)
                 continue
-
             date_str = (datetime.fromtimestamp(last_ts, tz=timezone.utc).strftime("%Y-%m-%d")
                         if last_ts else None)
-
             return {
                 "close": last_close,
                 "volume": last_vol,
@@ -145,7 +175,7 @@ def fetch_yahoo(symbol: str) -> dict:
             if attempt < YAHOO_RETRIES:
                 time.sleep(YAHOO_BACKOFF_SEC)
 
-    print(f"⚠️  Yahoo FAIL {symbol} after {YAHOO_RETRIES} attempts: {last_err}",
+    print(f"⚠️ Yahoo FAIL {symbol} after {YAHOO_RETRIES} attempts: {last_err}",
           file=sys.stderr)
     return {"close": None, "volume": None, "date": None, "attempts": YAHOO_RETRIES}
 
@@ -175,7 +205,7 @@ def fetch_fred(series_id: str) -> dict:
             "date": obs[0]["date"],
         }
     except Exception as e:
-        print(f"⚠️  FRED fail {series_id}: {e}", file=sys.stderr)
+        print(f"⚠️ FRED fail {series_id}: {e}", file=sys.stderr)
         return {"value": None, "date": None}
 
 
@@ -254,8 +284,8 @@ def upsert_row(row: dict) -> dict:
 
     date_key = row["date"]
     mask = df["date"] == date_key
-    audit_entry = None
 
+    audit_entry = None
     if mask.any():
         old_row = df.loc[mask].iloc[0].to_dict()
         audit_entry = {
@@ -270,6 +300,7 @@ def upsert_row(row: dict) -> dict:
         df_new = pd.DataFrame([row])
     else:
         df_new = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+
     df_new = df_new.sort_values("date").reset_index(drop=True)
     df_new.to_csv(CSV_PATH, index=False)
 
@@ -312,21 +343,22 @@ def main() -> int:
         return 1
 
     row, stats = build_row()
+
     print(f"\n📊 수집 결과:")
-    print(f"   Yahoo: {stats['yahoo_success']}/{stats['yahoo_success']+stats['yahoo_fail']} 성공")
-    print(f"   FRED:  {stats['fred_success']}/{stats['fred_success']+stats['fred_fail']} 성공")
+    print(f"  Yahoo: {stats['yahoo_success']}/{stats['yahoo_success']+stats['yahoo_fail']} 성공")
+    print(f"  FRED:  {stats['fred_success']}/{stats['fred_success']+stats['fred_fail']} 성공")
 
     result = upsert_row(row)
     update_metadata(result, row, stats)
 
     print(f"\n✅ {result['action'].upper()} row for {row['date']}")
-    print(f"   Total rows: {result['row_count']}")
-    print(f"   CSV: {CSV_PATH}")
+    print(f"  Total rows: {result['row_count']}")
+    print(f"  CSV: {CSV_PATH}")
 
     missing = [f for f in CRITICAL_FIELDS if row.get(f) is None]
     if missing:
-        print(f"\n⚠️  WARN: Missing critical: {missing}", file=sys.stderr)
-        print(f"⚠️  부분 데이터로 commit 진행 (FRED={stats['fred_success']}개 정상)",
+        print(f"\n⚠️ WARN: Missing critical: {missing}", file=sys.stderr)
+        print(f"⚠️ 부분 데이터로 commit 진행 (FRED={stats['fred_success']}개 정상)",
               file=sys.stderr)
 
     if stats['yahoo_success'] == 0 and stats['fred_success'] == 0:
