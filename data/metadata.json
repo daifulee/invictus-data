@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0",
-  "script_version": "1.0.2",
-  "last_run_utc": "2026-04-23T23:58:44+00:00",
-  "last_data_date": "2026-04-23",
-  "row_count": 6,
+  "script_version": "1.0.4",
+  "last_run_utc": "2026-04-24T14:22:22+00:00",
+  "last_data_date": "2026-04-24",
+  "row_count": 7,
   "last_action": "inserted",
   "columns": [
     "date",
@@ -57,6 +57,8 @@
     "KRW",
     "ES_F",
     "NQ_F",
+    "VIX3M",
+    "VVIX",
     "OAS_HY",
     "OAS_HY_asof",
     "T5YIE",
@@ -74,7 +76,25 @@
     "GS2",
     "GS2_asof",
     "GS10",
-    "GS10_asof"
+    "GS10_asof",
+    "WTREGEN",
+    "WTREGEN_asof",
+    "DGS10",
+    "DGS10_asof",
+    "DGS2",
+    "DGS2_asof",
+    "DTB3",
+    "DTB3_asof",
+    "EFFR",
+    "EFFR_asof",
+    "SOFR",
+    "SOFR_asof",
+    "NFCI",
+    "NFCI_asof",
+    "WALCL",
+    "WALCL_asof",
+    "UMCSENT",
+    "UMCSENT_asof"
   ],
   "critical_fields": [
     "GLD_close",
@@ -84,9 +104,9 @@
     "OAS_HY"
   ],
   "last_stats": {
-    "yahoo_success": 28,
+    "yahoo_success": 30,
     "yahoo_fail": 0,
-    "fred_success": 9,
+    "fred_success": 18,
     "fred_fail": 0
   }
 }
