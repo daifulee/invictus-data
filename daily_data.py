@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-INVICTUS Daily Data Collector v1.0.5
+INVICTUS Daily Data Collector v1.0.6
 =====================================
+v1.0.6 PATCH (2026-04-25):
+  FutureWarning 해결 (pd.concat dtype 결정 변경 대응)
+  - upsert_row() 함수 개선
+  - 컬럼 순서 명시적 정렬 + dtype 안정화
+
 v1.0.5 PATCH (2026-04-25):
   ARGUS 발견 기반 데이터 보강 (§11.8 매트릭스 + §12 외부 학습)
 
@@ -54,7 +59,7 @@ from curl_cffi import requests as cc_requests
 # ────────────────────────────────────────────────────────
 # 상수
 # ────────────────────────────────────────────────────────
-VERSION = "1.0.5.1"
+VERSION = "1.0.6"
 SCHEMA_VERSION = "1.1"  # ⭐ v1.0.5: 신규 컬럼 추가로 minor 버전 업
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "daily_2026.csv"
@@ -347,10 +352,16 @@ def upsert_row(row: dict) -> dict:
         }
         df = df.loc[~mask].copy()
 
+    # ⭐ v1.0.6: FutureWarning 해결 (dtype 명시적 정렬)
+    new_row_df = pd.DataFrame([row])
     if df.empty:
-        df_new = pd.DataFrame([row])
+        df_new = new_row_df
     else:
-        df_new = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+        # 컬럼 순서 통일 + 누락 컬럼 추가
+        all_cols = list(dict.fromkeys(list(df.columns) + list(new_row_df.columns)))
+        df = df.reindex(columns=all_cols)
+        new_row_df = new_row_df.reindex(columns=all_cols)
+        df_new = pd.concat([df, new_row_df], ignore_index=True, sort=False)
 
     df_new = df_new.sort_values("date").reset_index(drop=True)
     df_new.to_csv(CSV_PATH, index=False)
