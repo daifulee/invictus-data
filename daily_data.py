@@ -54,7 +54,7 @@ from curl_cffi import requests as cc_requests
 # ────────────────────────────────────────────────────────
 # 상수
 # ────────────────────────────────────────────────────────
-VERSION = "1.0.5"
+VERSION = "1.0.5.1"
 SCHEMA_VERSION = "1.1"  # ⭐ v1.0.5: 신규 컬럼 추가로 minor 버전 업
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "daily_2026.csv"
@@ -122,7 +122,9 @@ FRED_SERIES = {
     "DGS30":   "DGS30",           # 30Y Treasury (GLD A등급 ρ=+0.443)
     "STLFSI3": "STLFSI3",         # St. Louis 금융 스트레스
     "OAS_IG":  "BAMLC0A0CM",      # IG OAS (HY 보완)
-    "NAPM":    "NAPM",            # ISM 제조업 PMI
+    # ⭐ v1.0.5.1: NAPM 라이선스 문제로 INDPRO + CFNAI 교체
+    "INDPRO":  "INDPRO",          # 산업생산지수 (PMI 대체 표준)
+    "CFNAI":   "CFNAI",           # Chicago Fed 국가활동지수
 }
 
 # ⭐ v1.0.5 신규: ARGUS 외부 ETF (Optional, NLR/XLE/XLU proxy)
