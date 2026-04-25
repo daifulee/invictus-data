@@ -1,33 +1,42 @@
 #!/usr/bin/env python3
 """
-INVICTUS Daily Data Collector v1.0.4
+INVICTUS Daily Data Collector v1.0.5
 =====================================
+v1.0.5 PATCH (2026-04-25):
+  ARGUS 발견 기반 데이터 보강 (§11.8 매트릭스 + §12 외부 학습)
+
+  YAHOO_MACRO 확장: 10종 → 16종
+  추가 6종 (ARGUS Tier 1):
+    * NG=F     - Henry Hub 천연가스 (XLF/CIBR/SMH 영향, 매트릭스 -0.36)
+    * ^OVX     - Oil Volatility (COPX +0.39 B등급, PAVE +0.35)
+    * JPY=X    - USD/JPY (§11.8.10 신흥국 통화 비교)
+    * CNY=X    - USD/CNY (§11.8.10 신흥국 통화 비교)
+    * ^VIX9D   - 9-Day VIX (단기 변동성)
+    * ^SKEW    - CBOE SKEW
+
+  FRED_SERIES 확장: 18종 → 25종
+  추가 7종 (ARGUS Tier 1+2):
+    * T10YIE       - 10Y BEI 인플레 기대 (T5YIE 보완)
+    * T10Y3M       - 10Y-3M 스프레드 (T10Y2Y 보완, 더 강력)
+    * DGS5         - 5Y Treasury (GLD A등급 ρ=+0.481)
+    * DGS30        - 30Y Treasury (GLD A등급 ρ=+0.443)
+    * STLFSI3      - St. Louis 금융 스트레스
+    * BAMLC0A0CM   - IG OAS (HY 보완)
+    * NAPM         - ISM 제조업 PMI
+
+  ARGUS_EXTERNAL 신규 그룹 (5종, optional):
+    * URA, URNM    - 우라늄 ETF (NLR proxy)
+    * XOP, VDE     - 에너지 ETF
+    * UNG          - 천연가스 ETF
 
 v1.0.4 PATCH (2026-04-24):
-- YAHOO_MACRO 확장: 8종 → 10종
-- 추가 2종:
-  * VIX3M (^VIX3M) - 3개월 VIX (텀 스트럭처 판정)
-  * VVIX  (^VVIX)  - VIX 변동성 지수 (vol-of-vol)
-- Yahoo 매크로 블록의 success 카운터 자동 확장 (로직 변경 없음)
+  YAHOO_MACRO 확장: 8종 → 10종 (VIX3M, VVIX)
 
 v1.0.3 PATCH (2026-04-24):
-- FRED_SERIES 확장: 9종 → 18종
-- 추가 9종 (T2에서 자동화 가능 항목 병합):
-  * WTREGEN (Treasury General Account, weekly)
-  * DGS10 / DGS2 (daily, 기존 월간 GS10/GS2와 병행)
-  * DTB3 (13-week T-Bill, daily)
-  * EFFR / SOFR (daily, 단기금리)
-  * NFCI (Chicago Fed 금융여건지수, weekly)
-  * WALCL (Fed 대차대조표, weekly)
-  * UMCSENT (미시간 소비자심리, monthly)
-- 기존 GS2/GS10(월간)도 유지하여 히스토리 단절 방지
-- CRITICAL_FIELDS·스키마·CSV upsert 로직 변경 없음
+  FRED_SERIES 확장: 9종 → 18종
 
 v1.0.2 PATCH (2026-04-19):
-- yfinance 라이브러리 완전 제거
-- Yahoo v8 chart API 직접 호출 (curl_cffi chrome impersonate)
-- JSON 파싱·스키마 안정성 개선
-- FRED는 기존 유지 (v1.0.1에서 9/9 검증 완료)
+  yfinance 라이브러리 완전 제거, Yahoo v8 chart API 직접 호출
 """
 
 import os
@@ -45,8 +54,8 @@ from curl_cffi import requests as cc_requests
 # ────────────────────────────────────────────────────────
 # 상수
 # ────────────────────────────────────────────────────────
-VERSION = "1.0.4"
-SCHEMA_VERSION = "1.0"
+VERSION = "1.0.5"
+SCHEMA_VERSION = "1.1"  # ⭐ v1.0.5: 신규 컬럼 추가로 minor 버전 업
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "daily_2026.csv"
 META_PATH = DATA_DIR / "metadata.json"
@@ -62,7 +71,7 @@ TICKERS_20 = [
     "NLR", "CQQQ", "VNM", "TLT",
 ]
 
-# Yahoo 매크로 10종 (v1.0.4: VIX3M/VVIX 추가)
+# Yahoo 매크로 16종 (v1.0.5: ARGUS 6종 추가)
 YAHOO_MACRO = {
     "VIX":   "^VIX",
     "MOVE":  "^MOVE",
@@ -72,14 +81,21 @@ YAHOO_MACRO = {
     "KRW":   "KRW=X",
     "ES_F":  "ES=F",
     "NQ_F":  "NQ=F",
-    # v1.0.4 신규
-    "VIX3M": "^VIX3M",   # 3개월 VIX — 텀 스트럭처 (VIX/VIX3M < 1 = 콘탱고)
-    "VVIX":  "^VVIX",    # VIX 옵션 변동성 — vol-of-vol
+    # v1.0.4 추가
+    "VIX3M": "^VIX3M",
+    "VVIX":  "^VVIX",
+    # v1.0.5 신규 (ARGUS Tier 1)
+    "NG":    "NG=F",       # 천연가스 (XLF/CIBR -0.36)
+    "OVX":   "^OVX",       # Oil Volatility (COPX +0.39 B등급)
+    "JPY":   "JPY=X",      # USD/JPY (§11.8.10 통화 비교)
+    "CNY":   "CNY=X",      # USD/CNY (§11.8.10 통화 비교)
+    "VIX9D": "^VIX9D",     # 9-Day VIX
+    "SKEW":  "^SKEW",      # CBOE SKEW
 }
 
-# FRED 18종 — T1 기존 9 + T2 자동화 가능 9
+# FRED 25종 — T1 9 + T2 9 + ARGUS 7
 FRED_SERIES = {
-    # T1 기존 9종 (유지)
+    # T1 기존 9종 (v1.0.0)
     "OAS_HY":  "BAMLH0A0HYM2",
     "T5YIE":   "T5YIE",
     "SAHM":    "SAHMCURRENT",
@@ -87,29 +103,44 @@ FRED_SERIES = {
     "T10Y2Y":  "T10Y2Y",
     "ICSA":    "ICSA",
     "RRP":     "RRPONTSYD",
-    "GS2":     "GS2",        # 월간 (기존, 히스토리 보존)
-    "GS10":    "GS10",       # 월간 (기존, 히스토리 보존)
-    # T2 신규 9종 (2026-04-24 추가)
-    "WTREGEN": "WTREGEN",    # Treasury General Account (weekly)
-    "DGS10":   "DGS10",      # 10Y Treasury yield (daily)
-    "DGS2":    "DGS2",       # 2Y Treasury yield (daily)
-    "DTB3":    "DTB3",       # 13-week T-Bill (daily, IRX_13W 대체)
-    "EFFR":    "EFFR",       # Effective Fed Funds Rate (daily)
-    "SOFR":    "SOFR",       # Secured Overnight Financing Rate (daily)
-    "NFCI":    "NFCI",       # Chicago Fed NFCI (weekly)
-    "WALCL":   "WALCL",      # Fed Balance Sheet Total Assets (weekly)
-    "UMCSENT": "UMCSENT",    # U.Michigan Consumer Sentiment (monthly)
+    "GS2":     "GS2",          # 월간 (히스토리 보존)
+    "GS10":    "GS10",         # 월간 (히스토리 보존)
+    # T2 신규 9종 (v1.0.3, 2026-04-24)
+    "WTREGEN": "WTREGEN",      # Treasury General Account (weekly)
+    "DGS10":   "DGS10",        # 10Y Treasury (daily)
+    "DGS2":    "DGS2",         # 2Y Treasury (daily)
+    "DTB3":    "DTB3",         # 13-week T-Bill (daily)
+    "EFFR":    "EFFR",         # Effective Fed Funds Rate (daily)
+    "SOFR":    "SOFR",         # SOFR (daily)
+    "NFCI":    "NFCI",         # Chicago Fed NFCI (weekly)
+    "WALCL":   "WALCL",        # Fed Balance Sheet (weekly)
+    "UMCSENT": "UMCSENT",      # U.Michigan Consumer Sentiment (monthly)
+    # ARGUS 신규 7종 (v1.0.5, 2026-04-25)
+    "T10YIE":  "T10YIE",          # 10Y BEI 인플레 기대 (§12.5)
+    "T10Y3M":  "T10Y3M",          # 10Y-3M 스프레드 (T10Y2Y 보완)
+    "DGS5":    "DGS5",            # 5Y Treasury (GLD A등급 ρ=+0.481)
+    "DGS30":   "DGS30",           # 30Y Treasury (GLD A등급 ρ=+0.443)
+    "STLFSI3": "STLFSI3",         # St. Louis 금융 스트레스
+    "OAS_IG":  "BAMLC0A0CM",      # IG OAS (HY 보완)
+    "NAPM":    "NAPM",            # ISM 제조업 PMI
+}
+
+# ⭐ v1.0.5 신규: ARGUS 외부 ETF (Optional, NLR/XLE/XLU proxy)
+ARGUS_EXTERNAL = {
+    "URA":   "URA",     # Global X Uranium (NLR proxy)
+    "URNM":  "URNM",    # Sprott Uranium Miners (NLR proxy, 2019+)
+    "XOP":   "XOP",     # S&P E&P (XLE 보조)
+    "VDE":   "VDE",     # Vanguard Energy (XLE 보조)
+    "UNG":   "UNG",     # US Natural Gas Fund
 }
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 CRITICAL_FIELDS = ["GLD_close", "SMH_close", "XLE_close", "VIX", "OAS_HY"]
 
-
 # ────────────────────────────────────────────────────────
 # Yahoo v8 chart API 직접 호출
 # ────────────────────────────────────────────────────────
 _yahoo_session = None
-
 
 def get_yahoo_session():
     global _yahoo_session
@@ -124,8 +155,8 @@ def fetch_yahoo(symbol: str) -> dict:
     session = get_yahoo_session()
     url = f"{YAHOO_BASE}/{symbol}"
     params = {"interval": "1d", "range": "5d"}
-    last_err = None
 
+    last_err = None
     for attempt in range(1, YAHOO_RETRIES + 1):
         try:
             r = session.get(url, params=params, timeout=15)
@@ -150,7 +181,7 @@ def fetch_yahoo(symbol: str) -> dict:
             ind = r0.get("indicators", {}).get("quote", [{}])[0]
             closes = ind.get("close", [])
             volumes = ind.get("volume", [])
-            # 최신 유효 값 (뒤에서부터 non-null 찾기)
+
             last_close, last_vol, last_ts = None, None, None
             for i in range(len(closes) - 1, -1, -1):
                 if closes[i] is not None:
@@ -158,10 +189,12 @@ def fetch_yahoo(symbol: str) -> dict:
                     last_vol = float(volumes[i]) if i < len(volumes) and volumes[i] is not None else None
                     last_ts = ts[i] if i < len(ts) else None
                     break
+
             if last_close is None:
                 last_err = "all null closes"
                 time.sleep(YAHOO_BACKOFF_SEC)
                 continue
+
             date_str = (datetime.fromtimestamp(last_ts, tz=timezone.utc).strftime("%Y-%m-%d")
                         if last_ts else None)
             return {
@@ -219,10 +252,12 @@ def build_row():
         "as_of": now_utc.isoformat(timespec="seconds"),
         "source_version": VERSION,
     }
+
     nyse_dates = []
     yahoo_success = 0
     yahoo_fail = 0
 
+    # 20 ETF
     for sym in TICKERS_20:
         d = fetch_yahoo(sym)
         row[f"{sym}_close"] = d["close"]
@@ -234,6 +269,7 @@ def build_row():
         if d["date"]:
             nyse_dates.append(d["date"])
 
+    # Yahoo 매크로 16종
     for name, sym in YAHOO_MACRO.items():
         d = fetch_yahoo(sym)
         row[name] = d["close"]
@@ -244,6 +280,19 @@ def build_row():
         if d["date"]:
             nyse_dates.append(d["date"])
 
+    # ⭐ v1.0.5: ARGUS 외부 ETF 5종
+    for name, sym in ARGUS_EXTERNAL.items():
+        d = fetch_yahoo(sym)
+        row[f"{name}_close"] = d["close"]
+        row[f"{name}_volume"] = d["volume"]
+        if d["close"] is not None:
+            yahoo_success += 1
+        else:
+            yahoo_fail += 1
+        if d["date"]:
+            nyse_dates.append(d["date"])
+
+    # FRED 25종
     fred_success = 0
     fred_fail = 0
     for name, sid in FRED_SERIES.items():
@@ -270,7 +319,7 @@ def build_row():
 
 
 # ────────────────────────────────────────────────────────
-# Upsert + Audit
+# Upsert + Audit (변경 없음)
 # ────────────────────────────────────────────────────────
 def upsert_row(row: dict) -> dict:
     DATA_DIR.mkdir(exist_ok=True)
@@ -343,10 +392,12 @@ def main() -> int:
         return 1
 
     row, stats = build_row()
-
+    total_y = stats['yahoo_success'] + stats['yahoo_fail']
+    total_f = stats['fred_success'] + stats['fred_fail']
     print(f"\n📊 수집 결과:")
-    print(f"  Yahoo: {stats['yahoo_success']}/{stats['yahoo_success']+stats['yahoo_fail']} 성공")
-    print(f"  FRED:  {stats['fred_success']}/{stats['fred_success']+stats['fred_fail']} 성공")
+    print(f"  Yahoo: {stats['yahoo_success']}/{total_y} 성공")
+    print(f"    (20 ETF + 16 매크로 + 5 외부 = 41 항목)")
+    print(f"  FRED: {stats['fred_success']}/{total_f} 성공 (25 시리즈)")
 
     result = upsert_row(row)
     update_metadata(result, row, stats)
