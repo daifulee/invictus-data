@@ -1,10 +1,10 @@
 {
-  "schema_version": "1.0",
-  "script_version": "1.0.4",
-  "last_run_utc": "2026-04-24T14:22:22+00:00",
+  "schema_version": "1.1",
+  "script_version": "1.0.5",
+  "last_run_utc": "2026-04-25T08:49:40+00:00",
   "last_data_date": "2026-04-24",
-  "row_count": 7,
-  "last_action": "inserted",
+  "row_count": 253,
+  "last_action": "updated",
   "columns": [
     "date",
     "as_of",
@@ -59,6 +59,22 @@
     "NQ_F",
     "VIX3M",
     "VVIX",
+    "NG",
+    "OVX",
+    "JPY",
+    "CNY",
+    "VIX9D",
+    "SKEW",
+    "URA_close",
+    "URA_volume",
+    "URNM_close",
+    "URNM_volume",
+    "XOP_close",
+    "XOP_volume",
+    "VDE_close",
+    "VDE_volume",
+    "UNG_close",
+    "UNG_volume",
     "OAS_HY",
     "OAS_HY_asof",
     "T5YIE",
@@ -94,7 +110,21 @@
     "WALCL",
     "WALCL_asof",
     "UMCSENT",
-    "UMCSENT_asof"
+    "UMCSENT_asof",
+    "T10YIE",
+    "T10YIE_asof",
+    "T10Y3M",
+    "T10Y3M_asof",
+    "DGS5",
+    "DGS5_asof",
+    "DGS30",
+    "DGS30_asof",
+    "STLFSI3",
+    "STLFSI3_asof",
+    "OAS_IG",
+    "OAS_IG_asof",
+    "NAPM",
+    "NAPM_asof"
   ],
   "critical_fields": [
     "GLD_close",
@@ -104,9 +134,9 @@
     "OAS_HY"
   ],
   "last_stats": {
-    "yahoo_success": 30,
+    "yahoo_success": 41,
     "yahoo_fail": 0,
-    "fred_success": 18,
-    "fred_fail": 0
+    "fred_success": 24,
+    "fred_fail": 1
   }
 }
