@@ -1,10 +1,10 @@
 {
   "schema_version": "1.1",
   "script_version": "1.0.6",
-  "last_run_utc": "2026-05-25T00:11:10+00:00",
+  "last_run_utc": "2026-05-26T00:14:31+00:00",
   "last_data_date": "2026-05-22",
   "row_count": 273,
-  "last_action": "inserted",
+  "last_action": "updated",
   "columns": [
     "date",
     "as_of",
