@@ -1,26 +1,26 @@
 {
-  "updated": "2026-06-21T15:19:29.796296Z",
-  "based_on_date": "2026-06-21",
+  "updated": "2026-06-22T17:58:00.635382Z",
+  "based_on_date": "2026-06-22",
   "by": "GHA auto compute_target_weights.py v1.2 (Legio L1 beta, Yahoo v8)",
   "engine": "Legio v2.11 mom_score (base × vol_penalty × momma_mp)",
   "data_source": "Yahoo v8 chart API (query1.finance.yahoo.com)",
   "coverage": "20/20",
   "weights": {
-    "SMH": 0.293388,
-    "QQQM": 0.117371,
-    "COPX": 0.116977,
-    "IWM": 0.112097,
-    "PAVE": 0.105091,
-    "VEA": 0.078483,
-    "CIBR": 0.076594,
-    "달러RP(수시형)": 0.099999
+    "SMH": 0.293882,
+    "IWM": 0.11659,
+    "QQQM": 0.116364,
+    "PAVE": 0.112904,
+    "COPX": 0.10794,
+    "VEA": 0.082064,
+    "CIBR": 0.070255,
+    "달러RP(수시형)": 0.100001
   },
   "top7": [
     "SMH",
-    "QQQM",
-    "COPX",
     "IWM",
+    "QQQM",
     "PAVE",
+    "COPX",
     "VEA",
     "CIBR"
   ],
