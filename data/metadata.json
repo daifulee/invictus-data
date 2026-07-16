@@ -1,9 +1,9 @@
 {
   "schema_version": "1.1",
   "script_version": "1.0.6",
-  "last_run_utc": "2026-07-15T00:02:09+00:00",
-  "last_data_date": "2026-07-14",
-  "row_count": 307,
+  "last_run_utc": "2026-07-16T00:08:45+00:00",
+  "last_data_date": "2026-07-15",
+  "row_count": 308,
   "last_action": "inserted",
   "columns": [
     "date",
@@ -138,7 +138,7 @@
   "last_stats": {
     "yahoo_success": 41,
     "yahoo_fail": 0,
-    "fred_success": 26,
-    "fred_fail": 0
+    "fred_success": 16,
+    "fred_fail": 10
   }
 }
