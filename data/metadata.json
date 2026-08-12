@@ -1,9 +1,9 @@
 {
   "schema_version": "1.1",
   "script_version": "1.0.6",
-  "last_run_utc": "2026-08-11T23:53:18+00:00",
-  "last_data_date": "2026-08-11",
-  "row_count": 327,
+  "last_run_utc": "2026-08-12T23:53:41+00:00",
+  "last_data_date": "2026-08-12",
+  "row_count": 328,
   "last_action": "inserted",
   "columns": [
     "date",
