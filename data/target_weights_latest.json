@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-31T17:49:41.805562Z",
-  "based_on_date": "2026-10-31",
+  "updated": "2026-11-01T18:27:33.248851Z",
+  "based_on_date": "2026-11-01",
   "by": "GHA auto compute_target_weights.py v1.2 (Legio L1 beta, Yahoo v8)",
   "engine": "Legio v2.11 mom_score (base × vol_penalty × momma_mp)",
   "data_source": "Yahoo v8 chart API (query1.finance.yahoo.com)",
