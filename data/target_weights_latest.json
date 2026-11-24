@@ -1,25 +1,26 @@
 {
-  "updated": "2026-11-24T01:01:46.258780Z",
+  "updated": "2026-11-24T23:07:22.644718Z",
   "based_on_date": "2026-11-24",
   "by": "GHA auto compute_target_weights.py v1.2 (Legio L1 beta, Yahoo v8)",
   "engine": "Legio v2.11 mom_score (base × vol_penalty × momma_mp)",
   "data_source": "Yahoo v8 chart API (query1.finance.yahoo.com)",
   "coverage": "20/20",
   "weights": {
-    "XLV": 0.392041,
-    "INDA": 0.384226,
-    "CIBR": 0.065774,
-    "XLE": 0.057959,
+    "XLV": 0.411465,
+    "INDA": 0.246373,
+    "CIBR": 0.092232,
+    "XLF": 0.092232,
+    "XLE": 0.057698,
     "달러RP(수시형)": 0.1
   },
   "top7": [
     "XLV",
     "INDA",
     "CIBR",
-    "XLE",
     "XLF",
+    "XLE",
     "XLU",
-    "TLT"
+    "IWM"
   ],
   "rp_pct": 10.0,
   "override_status": "auto_beta_not_claude_final",
